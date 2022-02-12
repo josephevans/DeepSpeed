@@ -38,6 +38,8 @@ def init_distributed(dist_backend="nccl",
             )
         if in_aml() and not in_dlts():
             patch_aml_env_for_torch_nccl_backend(verbose=verbose)
+        elif in_aws_sm():
+            patch_aws_sm_env_for_torch_nccl_backend(verbose=verbose)
         else:
             mpi_discovery(distributed_port=distributed_port, verbose=verbose)
 
@@ -99,6 +101,9 @@ def in_aml():
     # Are we running inside an Azure Machine Learning (AML) environment?
     return 'AZUREML_EXPERIMENT_ID' in os.environ
 
+def in_aws_sm():
+    # Are we running inside an AWS SageMaker environment?
+    return 'SM_OUTPUT_INTERMEDIATE_DIR' in os.environ
 
 def in_dlts():
     # Are we running on a DLTS cluster?
@@ -135,6 +140,29 @@ def patch_aml_env_for_torch_nccl_backend(master_port=6105, verbose=True):
     if verbose:
         logger.info(
             "Discovered AzureML settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}"
+            .format(os.environ['RANK'],
+                    os.environ['LOCAL_RANK'],
+                    os.environ['WORLD_SIZE'],
+                    os.environ['MASTER_ADDR'],
+                    os.environ['MASTER_PORT']))
+
+
+def patch_aws_sm_env_for_torch_nccl_backend(master_port=6105, verbose=True):
+    """Helper routine to get and set environment variables.
+    """
+    os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+    os.environ['LOCAL_RANK'] = os.environ["OMPI_COMM_WORLD_LOCAL_RANK"]
+    os.environ["WORLD_SIZE"] = os.environ["OMPI_COMM_WORLD_SIZE"]
+
+    if verbose:
+        logger.info("NCCL_SOCKET_IFNAME original value = {}".format(
+            os.environ["NCCL_SOCKET_IFNAME"]))
+
+    #os.environ["NCCL_SOCKET_IFNAME"] = "^docker0,lo"
+
+    if verbose:
+        logger.info(
+            "Discovered AWS SageMaker settings of world_rank={}, local_rank={}, world_size={}, master_addr={}, master_port={}"
             .format(os.environ['RANK'],
                     os.environ['LOCAL_RANK'],
                     os.environ['WORLD_SIZE'],
