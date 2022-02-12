@@ -103,7 +103,7 @@ def in_aml():
 
 def in_aws_sm():
     # Are we running inside an AWS SageMaker environment?
-    return 'SM_OUTPUT_INTERMEDIATE_DIR' in os.environ
+    return 'SM_TRAINING_ENV' in os.environ
 
 def in_dlts():
     # Are we running on a DLTS cluster?
